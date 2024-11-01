@@ -1,22 +1,11 @@
-import axios, { AxiosError } from "axios";
+// frontend/src/services/api.ts
+import { AxiosError } from "axios";
+import { authClient } from "./auth";
 import { ApiError, PostDTO } from "../types/api";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8000/api";
-
-// Create axios instance with default config
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  withCredentials: true, // Important for handling authentication cookies
-});
-
-// Error handler
 const handleApiError = (error: AxiosError): never => {
   const apiError: ApiError = {
-    message: error.message,
+    message: error.message || "An error occurred",
     status: error.response?.status || 500,
     errors: error.response?.data?.errors,
   };
@@ -24,10 +13,9 @@ const handleApiError = (error: AxiosError): never => {
 };
 
 export const api = {
-  // Posts
   async getAllPosts() {
     try {
-      const response = await apiClient.get<PostDTO[]>("/posts/");
+      const response = await authClient.get<PostDTO[]>("api/posts/");
       return response.data;
     } catch (error) {
       return handleApiError(error as AxiosError);
@@ -36,16 +24,7 @@ export const api = {
 
   async createPost(post: Omit<PostDTO, "id" | "created_at">) {
     try {
-      const response = await apiClient.post<PostDTO>("api/posts/", post);
-      return response.data;
-    } catch (error) {
-      return handleApiError(error as AxiosError);
-    }
-  },
-
-  async getPost(id: number) {
-    try {
-      const response = await apiClient.get<PostDTO>(`/posts/${id}/`);
+      const response = await authClient.post<PostDTO>("api/posts/", post);
       return response.data;
     } catch (error) {
       return handleApiError(error as AxiosError);
@@ -54,7 +33,7 @@ export const api = {
 
   async updatePost(id: number, post: Omit<PostDTO, "id" | "created_at">) {
     try {
-      const response = await apiClient.put<PostDTO>(`/posts/${id}/`, post);
+      const response = await authClient.put<PostDTO>(`api/posts/${id}/`, post);
       return response.data;
     } catch (error) {
       return handleApiError(error as AxiosError);
@@ -63,7 +42,7 @@ export const api = {
 
   async deletePost(id: number) {
     try {
-      await apiClient.delete(`/posts/${id}/`);
+      await authClient.delete(`/posts/${id}/`);
     } catch (error) {
       return handleApiError(error as AxiosError);
     }
@@ -71,39 +50,9 @@ export const api = {
 
   async exportCsv() {
     try {
-      const response = await apiClient.get("/posts/export_csv/", {
+      const response = await authClient.get("api/posts/export_csv/", {
         responseType: "blob",
       });
-      return response.data;
-    } catch (error) {
-      return handleApiError(error as AxiosError);
-    }
-  },
-
-  // Authentication
-  async login(username: string, password: string) {
-    try {
-      const response = await apiClient.post("/auth/login/", {
-        username,
-        password,
-      });
-      return response.data;
-    } catch (error) {
-      return handleApiError(error as AxiosError);
-    }
-  },
-
-  async logout() {
-    try {
-      await apiClient.post("/auth/logout/");
-    } catch (error) {
-      return handleApiError(error as AxiosError);
-    }
-  },
-
-  async getCurrentUser() {
-    try {
-      const response = await apiClient.get("/auth/user/");
       return response.data;
     } catch (error) {
       return handleApiError(error as AxiosError);

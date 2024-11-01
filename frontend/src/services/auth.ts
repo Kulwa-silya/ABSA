@@ -1,49 +1,58 @@
+// frontend/src/services/auth.ts
 import axios from "axios";
-import { AuthCredentials, AuthResponse } from "../types/auth";
+import { AuthCredentials, AuthResponse, User } from "../types/auth";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = "http://localhost:8000";
+
+export const authClient = axios.create({
+  baseURL: API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+// Add token to requests if it exists
+authClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `JWT ${token}`;
+  }
+  return config;
+});
 
 export const authService = {
   async login(credentials: AuthCredentials): Promise<AuthResponse> {
     try {
-      const response = await axios.post(
-        `${API_URL}/api/auth/login/`,
-        credentials,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-          withCredentials: true,
-        },
-      );
-      return response.data;
+      const response = await authClient.post("/auth/jwt/create/", credentials);
+      const { access: token } = response.data;
+
+      // Get user data
+      const userResponse = await authClient.get("/auth/users/me/", {
+        headers: { Authorization: `JWT ${token}` },
+      });
+
+      return {
+        token,
+        user: userResponse.data,
+      };
     } catch (error: any) {
-      throw error.response?.data || { error: "Failed to login" };
+      throw new Error(error.response?.data?.detail || "Login failed");
     }
   },
 
   async logout(): Promise<void> {
-    try {
-      await axios.post(
-        `${API_URL}/api/auth/logout/`,
-        {},
-        {
-          withCredentials: true,
-        },
-      );
-    } catch (error: any) {
-      throw error.response?.data || { error: "Failed to logout" };
-    }
+    // JWT is stateless, so we just remove the token
+    localStorage.removeItem("token");
   },
 
-  async checkAuth(): Promise<AuthResponse> {
+  async getCurrentUser(): Promise<User> {
     try {
-      const response = await axios.get(`${API_URL}/api/auth/user/`, {
-        withCredentials: true,
-      });
+      const response = await authClient.get("/auth/users/me/");
       return response.data;
     } catch (error: any) {
-      throw error.response?.data || { error: "Failed to check auth status" };
+      throw new Error(
+        error.response?.data?.detail || "Failed to get user data",
+      );
     }
   },
 };

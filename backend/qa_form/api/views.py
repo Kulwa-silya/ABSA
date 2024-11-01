@@ -1,23 +1,26 @@
-from rest_framework import viewsets
+# backend/qa_form/api/views.py
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from django.http import HttpResponse
 import json
 import csv
 from ..models import Post, Comment, Aspect
 from .serializers import PostSerializer, CommentSerializer, AspectSerializer
 
-
 class PostViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    queryset = Post.objects.all()  # Default queryset for router/schema
     serializer_class = PostSerializer
-    queryset = Post.objects.all()
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Filter posts by the authenticated user
         return Post.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)  # This automatically sets the user
+        # Associate the post with the authenticated user
+        serializer.save(user=self.request.user)
 
     @action(detail=False, methods=['get'])
     def export_csv(self, request):
@@ -26,16 +29,17 @@ class PostViewSet(viewsets.ModelViewSet):
 
         writer = csv.writer(response)
         writer.writerow([
-            'post',
+            'post_id',
             'source',
+            'caption',
             'comment',
             'aspects_and_sentiments',
             'general_sentiment',
             'collector',
-            'created_at'  # Added this for better tracking
+            'created_at'
         ])
 
-        posts = Post.objects.filter(user=request.user).prefetch_related(
+        posts = self.get_queryset().prefetch_related(
             'comments',
             'comments__aspects'
         )
@@ -48,8 +52,9 @@ class PostViewSet(viewsets.ModelViewSet):
                 }
 
                 writer.writerow([
-                    post.caption,
+                    post.id,
                     post.source,
+                    post.caption,
                     comment.text,
                     json.dumps(aspects_data),
                     comment.general_sentiment,
@@ -60,9 +65,9 @@ class PostViewSet(viewsets.ModelViewSet):
         return response
 
 class CommentViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    queryset = Comment.objects.all()  # Default queryset for router/schema
     serializer_class = CommentSerializer
-    queryset = Comment.objects.all()  # Add default queryset
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = Comment.objects.filter(post__user=self.request.user)
@@ -71,11 +76,10 @@ class CommentViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(post_id=post_id)
         return queryset
 
-
 class AspectViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    queryset = Aspect.objects.all()  # Default queryset for router/schema
     serializer_class = AspectSerializer
-    queryset = Aspect.objects.all()  # Add default queryset
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = Aspect.objects.filter(comment__post__user=self.request.user)

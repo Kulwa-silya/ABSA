@@ -1,19 +1,20 @@
+// frontend/src/components/Login.tsx
 import React, { useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import { Button } from "./Button";
 
-interface LoginProps {
-  onLogin: (username: string, password: string) => Promise<void>;
-  error: string | null;
-  loading: boolean;
-}
-
-export function Login({ onLogin, error, loading }: LoginProps) {
+export function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const { auth, login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onLogin(username, password);
+    try {
+      await login(username, password);
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
   };
 
   return (
@@ -25,12 +26,9 @@ export function Login({ onLogin, error, loading }: LoginProps) {
           </h2>
         </div>
 
-        {error && (
-          <div
-            className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-            role="alert"
-          >
-            <span className="block sm:inline">{error}</span>
+        {auth.error && (
+          <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+            <span className="block sm:inline">{auth.error}</span>
           </div>
         )}
 
@@ -45,13 +43,11 @@ export function Login({ onLogin, error, loading }: LoginProps) {
               </label>
               <input
                 id="username"
-                name="username"
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="mt-1 block w-full rounded-lg border-gray-300 border p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Username"
               />
             </div>
             <div>
@@ -63,22 +59,18 @@ export function Login({ onLogin, error, loading }: LoginProps) {
               </label>
               <input
                 id="password"
-                name="password"
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full rounded-lg border-gray-300 border p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Password"
               />
             </div>
           </div>
 
-          <div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign in"}
-            </Button>
-          </div>
+          <Button type="submit" className="w-full" disabled={auth.loading}>
+            {auth.loading ? "Signing in..." : "Sign in"}
+          </Button>
         </form>
       </div>
     </div>
