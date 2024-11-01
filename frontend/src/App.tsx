@@ -1,28 +1,38 @@
-import React, { useState } from 'react';
-import { PlusCircle, Send } from 'lucide-react';
-import { StepIndicator } from './components/StepIndicator';
-import { Button } from './components/Button';
-import { CommentForm } from './components/CommentForm';
-import { FormData, Comment } from './types/form';
-import { PostDTO } from './types/api';
-import { usePost } from './hooks/usePost';
+import React, { useState } from "react";
+import { PlusCircle, Send } from "lucide-react";
+import { StepIndicator } from "./components/StepIndicator";
+import { Button } from "./components/Button";
+import { CommentForm } from "./components/CommentForm";
+import { FormData, Comment } from "./types/form";
+import { PostDTO } from "./types/api";
+import { usePost } from "./hooks/usePost";
 
-const STEPS = ['Post Caption', 'Comments', 'Review'];
+const STEPS = ["Post Caption", "Comments", "Review"];
 
 function App() {
   const { createPost, loading, error } = usePost();
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<FormData>({
-    postCaption: '',
+    postCaption: "",
     comments: [
       {
-        id: '1',
-        text: '',
-        aspects: [{ id: '1', aspect: '', sentiment: 'neutral' }],
-        generalSentiment: 'neutral',
+        id: "1",
+        text: "",
+        aspects: [{ id: "1", aspect: "", sentiment: "neutral" }],
+        generalSentiment: "neutral",
       },
     ],
   });
+
+  const validatePostCaption = () => formData.postCaption.trim().length > 0;
+
+  const validateComments = () => {
+    return formData.comments.every(
+      (comment) =>
+        comment.text.trim().length > 0 &&
+        comment.aspects.every((aspect) => aspect.aspect.trim().length > 0),
+    );
+  };
 
   const handlePostCaptionChange = (value: string) => {
     setFormData((prev) => ({ ...prev, postCaption: value }));
@@ -35,14 +45,21 @@ function App() {
         ...prev.comments,
         {
           id: crypto.randomUUID(),
-          text: '',
-          aspects: [{ id: crypto.randomUUID(), aspect: '', sentiment: 'neutral' }],
-          generalSentiment: 'neutral',
+          text: "",
+          aspects: [
+            { id: crypto.randomUUID(), aspect: "", sentiment: "neutral" },
+          ],
+          generalSentiment: "neutral",
         },
       ],
     }));
   };
+
   const handleRemoveComment = (commentId: string) => {
+    if (formData.comments.length <= 1) {
+      alert("You must have at least one comment");
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
       comments: prev.comments.filter((comment) => comment.id !== commentId),
@@ -53,7 +70,7 @@ function App() {
     setFormData((prev) => ({
       ...prev,
       comments: prev.comments.map((comment) =>
-        comment.id === commentId ? { ...comment, text: value } : comment
+        comment.id === commentId ? { ...comment, text: value } : comment,
       ),
     }));
   };
@@ -67,10 +84,10 @@ function App() {
               ...comment,
               aspects: [
                 ...comment.aspects,
-                { id: crypto.randomUUID(), aspect: '', sentiment: 'neutral' },
+                { id: crypto.randomUUID(), aspect: "", sentiment: "neutral" },
               ],
             }
-          : comment
+          : comment,
       ),
     }));
   };
@@ -87,7 +104,7 @@ function App() {
                   ? comment.aspects.filter((aspect) => aspect.id !== aspectId)
                   : comment.aspects,
             }
-          : comment
+          : comment,
       ),
     }));
   };
@@ -95,8 +112,8 @@ function App() {
   const handleAspectChange = (
     commentId: string,
     aspectId: string,
-    field: 'aspect' | 'sentiment',
-    value: string
+    field: "aspect" | "sentiment",
+    value: string,
   ) => {
     setFormData((prev) => ({
       ...prev,
@@ -105,67 +122,90 @@ function App() {
           ? {
               ...comment,
               aspects: comment.aspects.map((aspect) =>
-                aspect.id === aspectId ? { ...aspect, [field]: value } : aspect
+                aspect.id === aspectId ? { ...aspect, [field]: value } : aspect,
               ),
             }
-          : comment
+          : comment,
       ),
     }));
   };
 
   const handleGeneralSentimentChange = (
     commentId: string,
-    value: 'positive' | 'negative' | 'neutral'
+    value: "positive" | "negative" | "neutral",
   ) => {
     setFormData((prev) => ({
       ...prev,
       comments: prev.comments.map((comment) =>
-        comment.id === commentId ? { ...comment, generalSentiment: value } : comment
+        comment.id === commentId
+          ? { ...comment, generalSentiment: value }
+          : comment,
       ),
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const postData: Omit<PostDTO, 'id' | 'created_at'> = {
-        caption: formData.postCaption,
-        comments: formData.comments.map(comment => ({
-          text: comment.text,
-          general_sentiment: comment.generalSentiment,
-          aspects: comment.aspects.map(aspect => ({
-            aspect_name: aspect.aspect,
-            aspect_text: '',
-            sentiment: aspect.sentiment,
-          })),
-        })),
-      };
+  const handleNext = (e: React.MouseEvent) => {
+    e.preventDefault(); // Add this to prevent form submission
 
-      await createPost(postData);
-      alert('Post created successfully!');
-      setFormData({
-        postCaption: '',
-        comments: [
-          {
-            id: '1',
-            text: '',
-            aspects: [{ id: '1', aspect: '', sentiment: 'neutral' }],
-            generalSentiment: 'neutral',
-          },
-        ],
-      });
-      setCurrentStep(0);
-    } catch (err) {
-      alert('Error creating post: ' + (err as Error).message);
+    // Validate current step before proceeding
+    if (currentStep === 0 && !validatePostCaption()) {
+      alert("Please enter a post caption");
+      return;
     }
-  };
 
-  const handleNext = () => {
+    if (currentStep === 1 && !validateComments()) {
+      alert("Please fill in all comment fields and aspects");
+      return;
+    }
+
     setCurrentStep((prev) => Math.min(prev + 1, STEPS.length - 1));
   };
 
-  const handleBack = () => {
+  const handleBack = (e: React.MouseEvent) => {
+    e.preventDefault(); // Add this to prevent form submission
     setCurrentStep((prev) => Math.max(prev - 1, 0));
+  };
+
+  const handleSubmitData = async () => {
+    const postData: Omit<PostDTO, "id" | "created_at"> = {
+      caption: formData.postCaption,
+      comments: formData.comments.map((comment) => ({
+        text: comment.text,
+        general_sentiment: comment.generalSentiment,
+        aspects: comment.aspects.map((aspect) => ({
+          aspect_name: aspect.aspect,
+          aspect_text: "",
+          sentiment: aspect.sentiment,
+        })),
+      })),
+    };
+
+    await createPost(postData);
+    alert("Post created successfully!");
+    setFormData({
+      postCaption: "",
+      comments: [
+        {
+          id: "1",
+          text: "",
+          aspects: [{ id: "1", aspect: "", sentiment: "neutral" }],
+          generalSentiment: "neutral",
+        },
+      ],
+    });
+    setCurrentStep(0);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (currentStep === STEPS.length - 1) {
+      try {
+        await handleSubmitData();
+      } catch (err) {
+        alert("Error creating post: " + (err as Error).message);
+      }
+    }
   };
 
   const renderStep = () => {
@@ -173,7 +213,10 @@ function App() {
       case 0:
         return (
           <div>
-            <label htmlFor="postCaption" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="postCaption"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Post Caption
             </label>
             <textarea
@@ -200,12 +243,16 @@ function App() {
                   comment={comment.text}
                   aspects={comment.aspects}
                   generalSentiment={comment.generalSentiment}
-                  onCommentChange={(value) => handleCommentChange(comment.id, value)}
+                  onCommentChange={(value) =>
+                    handleCommentChange(comment.id, value)
+                  }
                   onAspectChange={(aspectId, field, value) =>
                     handleAspectChange(comment.id, aspectId, field, value)
                   }
                   onAddAspect={() => handleAddAspect(comment.id)}
-                  onRemoveAspect={(aspectId) => handleRemoveAspect(comment.id, aspectId)}
+                  onRemoveAspect={(aspectId) =>
+                    handleRemoveAspect(comment.id, aspectId)
+                  }
                   onGeneralSentimentChange={(value) =>
                     handleGeneralSentimentChange(comment.id, value)
                   }
@@ -230,7 +277,9 @@ function App() {
         return (
           <div className="space-y-8">
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Post Caption</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Post Caption
+              </h3>
               <p className="whitespace-pre-wrap">{formData.postCaption}</p>
             </div>
             {formData.comments.map((comment, index) => (
@@ -245,13 +294,16 @@ function App() {
                     <ul className="list-disc list-inside">
                       {comment.aspects.map((aspect) => (
                         <li key={aspect.id}>
-                          {aspect.aspect}: <span className="capitalize">{aspect.sentiment}</span>
+                          {aspect.aspect}:{" "}
+                          <span className="capitalize">{aspect.sentiment}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-700 mb-2">General Sentiment:</h4>
+                    <h4 className="font-medium text-gray-700 mb-2">
+                      General Sentiment:
+                    </h4>
                     <p className="capitalize">{comment.generalSentiment}</p>
                   </div>
                 </div>
@@ -273,7 +325,10 @@ function App() {
         </h1>
 
         {error && (
-          <div className="mb-4 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <div
+            className="mb-4 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+            role="alert"
+          >
             <strong className="font-bold">Error!</strong>
             <span className="block sm:inline"> {error.message}</span>
           </div>
@@ -289,16 +344,17 @@ function App() {
               type="button"
               variant="secondary"
               onClick={handleBack}
-              disabled={currentStep === 0}
+              disabled={currentStep === 0 || loading}
             >
               Back
             </Button>
+
             {currentStep === STEPS.length - 1 ? (
               <Button type="submit" icon={Send} disabled={loading}>
-                {loading ? 'Submitting...' : 'Submit Feedback'}
+                {loading ? "Submitting..." : "Submit Feedback"}
               </Button>
             ) : (
-              <Button type="button" onClick={handleNext}>
+              <Button type="button" onClick={handleNext} disabled={loading}>
                 Next
               </Button>
             )}
@@ -307,9 +363,7 @@ function App() {
 
         {loading && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white p-4 rounded-lg">
-              Submitting...
-            </div>
+            <div className="bg-white p-4 rounded-lg">Submitting...</div>
           </div>
         )}
       </div>
