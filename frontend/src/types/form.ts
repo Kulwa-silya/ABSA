@@ -4,17 +4,18 @@
 export interface AspectEntry {
   id: string;
   aspect: string;
-  sentiment: 'positive' | 'negative' | 'neutral';
+  sentiment: "positive" | "negative" | "neutral";
 }
 
 export interface Comment {
   id: string;
   text: string;
   aspects: AspectEntry[];
-  generalSentiment: 'positive' | 'negative' | 'neutral';
+  generalSentiment: "positive" | "negative" | "neutral";
 }
 
 export interface FormData {
   postCaption: string;
+  source: string;
   comments: Comment[];
 }

@@ -15,6 +15,10 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_HOST=db
+      # Add these for automatic superuser creation
+      - DJANGO_SUPERUSER_USERNAME=admin
+      - DJANGO_SUPERUSER_PASSWORD=admin12345
+      - DJANGO_SUPERUSER_EMAIL=admin@example.com
     depends_on:
       db:
         condition: service_healthy

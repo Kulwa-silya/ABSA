@@ -1,12 +1,14 @@
-# backend/qa_form/models.py
 from django.db import models
+from django.contrib.auth.models import User
 
 class Post(models.Model):
     caption = models.TextField()
+    source = models.TextField(default=" ")
     created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
 
     def __str__(self):
-        return f"Post {self.id}"
+        return f"Post {self.id} from {self.source} by {self.user.username}"
 
 class Comment(models.Model):
     SENTIMENT_CHOICES = [
@@ -31,11 +33,9 @@ class Aspect(models.Model):
     ]
 
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='aspects')
-    aspect_name = models.CharField(max_length=100)  # Free text field for aspect name
-    aspect_text = models.TextField(blank=True)      # Optional field to store the specific text that indicates this aspect
+    aspect_name = models.CharField(max_length=100)
+    aspect_text = models.TextField(blank=True)
     sentiment = models.CharField(max_length=10, choices=SENTIMENT_CHOICES)
-    
-    # Optional fields for additional analysis
 
     class Meta:
         ordering = ['id']
