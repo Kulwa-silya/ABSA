@@ -6,8 +6,8 @@ from rest_framework.response import Response
 from django.http import HttpResponse
 import json
 import csv
-from ..models import Post, Comment, Aspect
-from .serializers import PostSerializer, CommentSerializer, AspectSerializer
+from ..models import Post, Comment, Aspect, Source
+from .serializers import PostSerializer, CommentSerializer, AspectSerializer, SourceSerializer
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()  # Default queryset for router/schema
@@ -87,3 +87,15 @@ class AspectViewSet(viewsets.ModelViewSet):
         if comment_id is not None:
             queryset = queryset.filter(comment_id=comment_id)
         return queryset
+
+class SourceViewSet(viewsets.ModelViewSet):
+    queryset = Source.objects.all()
+    serializer_class = SourceSerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        query = request.query_params.get('q', '').upper()
+        sources = Source.objects.filter(name__startswith=query).order_by('-usage_count')[:5]
+        serializer = self.get_serializer(sources, many=True)
+        return Response(serializer.data)

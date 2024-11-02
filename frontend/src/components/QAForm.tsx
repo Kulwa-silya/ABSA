@@ -8,6 +8,7 @@ import { FormData, Comment } from "../types/form";
 import { PostDTO } from "../types/api";
 import { usePost } from "../hooks/usePost";
 import { useAuth } from "../contexts/AuthContext";
+import { SourceInput } from "./SourceInput"; // Add this import
 
 const STEPS = ["Post Caption", "Comments", "Review"];
 
@@ -233,14 +234,9 @@ export function QAForm() {
               >
                 Social Media Source
               </label>
-              <input
-                id="source"
-                type="text"
+              <SourceInput
                 value={formData.source}
-                onChange={(e) => handleSourceChange(e.target.value)}
-                placeholder="Example: '@instagram_account'"
-                className="w-full rounded-lg border-gray-300 border p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                required
+                onChange={handleSourceChange}
               />
             </div>
             <div>

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from ..models import Post, Comment, Aspect
+from ..models import Post, Comment, Aspect, Source
+from django.db import models
 
 class AspectSerializer(serializers.ModelSerializer):
     class Meta:
@@ -23,20 +24,41 @@ class CommentSerializer(serializers.ModelSerializer):
 
         return comment
 
+class SourceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Source
+        fields = ['id', 'name', 'usage_count']
+        read_only_fields = ['usage_count']
+
 class PostSerializer(serializers.ModelSerializer):
     comments = CommentSerializer(many=True, required=False)
-    user = serializers.PrimaryKeyRelatedField(read_only=True)  # Add this line
-    username = serializers.CharField(source='user.username', read_only=True)  # Optional: add this if you want to include username
+    source = serializers.CharField()  # We'll handle source creation/lookup in create method
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    username = serializers.SerializerMethodField()  # Add this line
 
     class Meta:
         model = Post
         fields = ['id', 'caption', 'source', 'created_at', 'comments', 'user', 'username']
-        read_only_fields = ['user']  # Add this line to make it explicit
+        read_only_fields = ['user', 'username']
+
+    def get_username(self, obj):  # Add this method
+        return obj.user.username if obj.user else None
 
     def create(self, validated_data):
+        source_name = validated_data.pop('source').upper()
         comments_data = validated_data.pop('comments', [])
-        post = Post.objects.create(**validated_data)
 
+        # Get or create source
+        source, created = Source.objects.get_or_create(name=source_name)
+        if not created:
+            # Update usage count and last_used (auto_now handles last_used)
+            source.usage_count = models.F('usage_count') + 1
+            source.save()
+
+        # Create post with source
+        post = Post.objects.create(source=source, **validated_data)
+
+        # Create comments and aspects
         for comment_data in comments_data:
             aspects_data = comment_data.pop('aspects', [])
             comment = Comment.objects.create(post=post, **comment_data)

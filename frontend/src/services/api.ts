@@ -58,4 +58,14 @@ export const api = {
       return handleApiError(error as AxiosError);
     }
   },
+  async searchSources(query: string) {
+    try {
+      const response = await authClient.get<SourceSuggestion[]>(
+        `api/sources/search/?q=${encodeURIComponent(query)}`,
+      );
+      return response.data;
+    } catch (error) {
+      return handleApiError(error as AxiosError);
+    }
+  },
 };

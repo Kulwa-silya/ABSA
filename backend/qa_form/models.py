@@ -1,9 +1,23 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+class Source(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(auto_now=True)
+    usage_count = models.IntegerField(default=0)
+
+    def save(self, *args, **kwargs):
+        # Convert name to uppercase before saving
+        self.name = self.name.upper()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
 class Post(models.Model):
     caption = models.TextField()
-    source = models.TextField(default=" ")
+    source = models.ForeignKey(Source, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
 
