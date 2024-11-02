@@ -4,6 +4,9 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.http import HttpResponse
+from datetime import datetime, timedelta
+from django.db.models import Count
+from django.db.models.functions import TruncDate
 import json
 import csv
 from ..models import Post, Comment, Aspect, Source
@@ -63,6 +66,63 @@ class PostViewSet(viewsets.ModelViewSet):
                 ])
 
         return response
+
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        # Get user's posts
+        user_posts = Post.objects.filter(user=request.user)
+
+        # Get distinct sources for this user
+        user_sources = (
+            Source.objects
+            .filter(post__user=request.user)
+            .distinct()  # This ensures we only count each source once
+        )
+
+        # Get top sources with correct counts
+        top_sources = (
+            Source.objects
+            .filter(post__user=request.user)
+            .annotate(count=Count('post'))
+            .order_by('-count')[:5]
+            .values('name', 'count')
+        )
+
+        # Calculate date range
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=6)
+
+        # Get daily post counts
+        daily_counts = (
+            user_posts
+            .filter(created_at__date__gte=start_date)
+            .annotate(date=TruncDate('created_at'))
+            .values('date')
+            .annotate(count=Count('id'))
+            .order_by('date')
+        )
+
+        # Fill in missing dates
+        date_counts = {
+            (start_date + timedelta(days=i)): 0
+            for i in range(7)
+        }
+        for entry in daily_counts:
+            date_counts[entry['date']] = entry['count']
+
+        return Response({
+            'totalPosts': user_posts.count(),
+            'totalComments': Comment.objects.filter(post__user=request.user).count(),
+            'sourcesCount': user_sources.count(),  # This should now give the correct count
+            'lastSevenDays': [
+                {
+                    'date': date.strftime('%Y-%m-%d'),
+                    'count': count
+                }
+                for date, count in date_counts.items()
+            ],
+            'topSources': list(top_sources)
+        })
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()  # Default queryset for router/schema

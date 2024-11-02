@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'djoser',
     'corsheaders',
+    'django_extensions',
     'qa_form.apps.QAFormConfig',
 ]
 
