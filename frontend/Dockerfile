@@ -5,7 +5,7 @@ WORKDIR /app
 # Install dependencies
 COPY package.json package-lock.json ./
 RUN npm install
-
+RUN npm install recharts@2.13.3  # Explicit version install
 # Copy project files
 COPY . .
 

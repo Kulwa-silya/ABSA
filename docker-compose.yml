@@ -1,5 +1,4 @@
 # version: '3.8'
-
 services:
   backend:
     build: ./backend
@@ -15,7 +14,6 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_HOST=db
-      # Add these for automatic superuser creation
       - DJANGO_SUPERUSER_USERNAME=admin
       - DJANGO_SUPERUSER_PASSWORD=admin12345
       - DJANGO_SUPERUSER_EMAIL=admin@example.com
@@ -26,12 +24,12 @@ services:
   frontend:
     build: ./frontend
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      # Changed this line to exclude node_modules
+      - ./frontend:/app:delegated
+      - /app/node_modules/
     ports:
       - "3000:3000"
     environment:
-      # - REACT_APP_API_URL=http://localhost:8000
       - VITE_API_URL=http://localhost:8000
     depends_on:
       - backend

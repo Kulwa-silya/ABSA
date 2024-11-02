@@ -68,4 +68,12 @@ export const api = {
       return handleApiError(error as AxiosError);
     }
   },
+  async getDashboardStats() {
+    try {
+      const response = await authClient.get("api/posts/dashboard_stats/");
+      return response.data;
+    } catch (error) {
+      return handleApiError(error as AxiosError);
+    }
+  },
 };
