@@ -1,5 +1,5 @@
 # docker/prod/frontend/Dockerfile
-FROM node:18 as builder
+FROM node:18 AS builder
 
 WORKDIR /app
 
@@ -10,6 +10,16 @@ COPY frontend/package*.json ./
 RUN npm install
 
 RUN npx vite --version || echo "Vite not installed"
+
+# Create the 'node' group and user
+RUN addgroup -g 1000 node && \
+    adduser -D -u 1000 -G node node
+
+# Switch to 'node' user
+USER node
+
+# Change ownership to the custom user
+RUN chown -R appuser:appuser /usr/share/nginx/html
 
 # Copy source code
 # COPY . .
