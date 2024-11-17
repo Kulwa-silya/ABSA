@@ -1,0 +1,35 @@
+# ABSA/docker-compose.base.yml
+services:
+  backend:
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: &common-backend-env
+      - POSTGRES_DB=qa_form
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=db
+
+  frontend:
+    depends_on:
+      - backend
+    volumes:
+      - /app/node_modules/
+    user: "node:node"
+
+  db:
+    image: postgres:16.5-alpine3.20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=qa_form
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
