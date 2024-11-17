@@ -1,10 +1,7 @@
-# docker/dev/config/settings_local.py
+# backend/config/settings_local.py
 import os
 import sys
-
-# Add the backend directory to the Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../backend')))
-from config.settings_base import *
+from .settings_base import *
 
 # Development specific settings
 DEBUG = True

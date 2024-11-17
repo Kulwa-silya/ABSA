@@ -1,4 +1,4 @@
-# config/settings.py
+# config/settings_base.py
 
 import os
 from datetime import timedelta
