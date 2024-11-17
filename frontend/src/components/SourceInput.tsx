@@ -42,7 +42,7 @@ export function SourceInput({ value, onChange }: SourceInputProps) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => setShowSuggestions(true)}
-        placeholder="Example: '@instagram_account'"
+        placeholder="Example: '@tanesco_instagram_account'"
         className="w-full rounded-lg border-gray-300 border p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
         required
       />

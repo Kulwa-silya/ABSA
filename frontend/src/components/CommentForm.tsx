@@ -1,4 +1,4 @@
-// --- frontend/src/components/CommentForm.tsx ---
+// frontend/src/components/CommentForm.tsx
 import React from 'react';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Button } from './Button';
@@ -8,32 +8,35 @@ interface CommentFormProps {
   comment: string;
   aspects: AspectEntry[];
   generalSentiment: 'positive' | 'negative' | 'neutral';
+  commentId: string;  // Add this prop to create unique IDs
   onCommentChange: (value: string) => void;
   onAspectChange: (id: string, field: 'aspect' | 'sentiment', value: string) => void;
   onAddAspect: () => void;
   onRemoveAspect: (id: string) => void;
   onGeneralSentimentChange: (value: 'positive' | 'negative' | 'neutral') => void;
-  onRemoveComment?: () => void;  // Add this prop
+  onRemoveComment?: () => void;
 }
 
 export function CommentForm({
   comment,
   aspects,
   generalSentiment,
+  commentId,
   onCommentChange,
   onAspectChange,
   onAddAspect,
   onRemoveAspect,
   onGeneralSentimentChange,
-  onRemoveComment,  // Add this prop
+  onRemoveComment,
 }: CommentFormProps) {
   return (
     <div className="space-y-6">
+      {/* Comment Text Section */}
       <div className="flex justify-between items-start">
-        <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor={`comment-${commentId}`} className="block text-sm font-medium text-gray-700 mb-2">
           Comment Text
         </label>
-        {onRemoveComment && (  // Add remove comment button
+        {onRemoveComment && (
           <button
             type="button"
             onClick={onRemoveComment}
@@ -44,7 +47,7 @@ export function CommentForm({
         )}
       </div>
       <textarea
-        id="comment"
+        id={`comment-${commentId}`}
         value={comment}
         onChange={(e) => onCommentChange(e.target.value)}
         placeholder="Example: 'I love the new features of your product, but delivery took too long.'"
@@ -53,6 +56,7 @@ export function CommentForm({
         required
       />
 
+      {/* Aspects Section */}
       <div>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Aspects and Sentiments</h3>
@@ -70,7 +74,7 @@ export function CommentForm({
           {aspects.map((aspect) => (
             <div key={aspect.id} className="flex gap-4 items-start bg-gray-50 p-4 rounded-lg">
               <div className="flex-1">
-                <input  // Changed from select to input
+                <input
                   type="text"
                   value={aspect.aspect}
                   onChange={(e) => onAspectChange(aspect.id, 'aspect', e.target.value)}
@@ -85,15 +89,15 @@ export function CommentForm({
                   <div key={sentiment} className="flex items-center">
                     <input
                       type="radio"
-                      id={`${aspect.id}-${sentiment}`}
-                      name={`sentiment-${aspect.id}`}
+                      id={`aspect-${commentId}-${aspect.id}-${sentiment}`}
+                      name={`sentiment-${commentId}-${aspect.id}`}
                       value={sentiment}
                       checked={aspect.sentiment === sentiment}
                       onChange={(e) => onAspectChange(aspect.id, 'sentiment', e.target.value)}
                       className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
                     />
                     <label
-                      htmlFor={`${aspect.id}-${sentiment}`}
+                      htmlFor={`aspect-${commentId}-${aspect.id}-${sentiment}`}
                       className="ml-2 text-sm text-gray-700 capitalize"
                     >
                       {sentiment}
@@ -116,6 +120,7 @@ export function CommentForm({
         </div>
       </div>
 
+      {/* General Sentiment Section */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">General Sentiment</h3>
         <div className="flex gap-6">
@@ -123,15 +128,15 @@ export function CommentForm({
             <div key={sentiment} className="flex items-center">
               <input
                 type="radio"
-                id={`general-${sentiment}`}
-                name="general-sentiment"
+                id={`general-${commentId}-${sentiment}`}
+                name={`general-sentiment-${commentId}`}
                 value={sentiment}
                 checked={generalSentiment === sentiment}
                 onChange={(e) => onGeneralSentimentChange(e.target.value as typeof generalSentiment)}
                 className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
               />
               <label
-                htmlFor={`general-${sentiment}`}
+                htmlFor={`general-${commentId}-${sentiment}`}
                 className="ml-2 text-sm text-gray-700 capitalize"
               >
                 {sentiment}

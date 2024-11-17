@@ -10,7 +10,13 @@ SECRET_KEY = 'django-insecure-your-secret-key-here'
 
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "185.137.122.217",
+    "161.97.167.122",  # Add your server IP
+    "*"  # Or use this temporarily for testing
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -149,6 +155,8 @@ DJOSER = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://161.97.167.122:3000",
+    "http://185.137.122.217:3000",
     "http://frontend:3000",
 ]
 CORS_ALLOW_CREDENTIALS = True

@@ -9,6 +9,7 @@ import { PostDTO } from "../types/api";
 import { usePost } from "../hooks/usePost";
 import { useAuth } from "../contexts/AuthContext";
 import { SourceInput } from "./SourceInput"; // Add this import
+import { generateUUID } from '../utils/uuid';
 
 const STEPS = ["Post Caption", "Comments", "Review"];
 
@@ -56,10 +57,10 @@ export function QAForm() {
       comments: [
         ...prev.comments,
         {
-          id: crypto.randomUUID(),
+          id: generateUUID(),
           text: "",
           aspects: [
-            { id: crypto.randomUUID(), aspect: "", sentiment: "neutral" },
+            { id: generateUUID(), aspect: "", sentiment: "neutral" },
           ],
           generalSentiment: "neutral",
         },
@@ -96,10 +97,10 @@ export function QAForm() {
               ...comment,
               aspects: [
                 ...comment.aspects,
-                { id: crypto.randomUUID(), aspect: "", sentiment: "neutral" },
+                { id: generateUUID(), aspect: "", sentiment: "neutral" },
               ],
             }
-          : comment,
+          : comment
       ),
     }));
   };
@@ -271,6 +272,7 @@ export function QAForm() {
                   comment={comment.text}
                   aspects={comment.aspects}
                   generalSentiment={comment.generalSentiment}
+                  commentId={comment.id}
                   onCommentChange={(value) =>
                     handleCommentChange(comment.id, value)
                   }

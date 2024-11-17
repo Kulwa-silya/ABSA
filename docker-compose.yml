@@ -5,7 +5,7 @@ services:
     volumes:
       - ./backend:/app
     ports:
-      - "8000:8000"
+      - "0.0.0.0:8000:8000"
     environment:
       - DEBUG=1
       - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
@@ -17,6 +17,7 @@ services:
       - DJANGO_SUPERUSER_USERNAME=admin
       - DJANGO_SUPERUSER_PASSWORD=admin12345
       - DJANGO_SUPERUSER_EMAIL=admin@example.com
+    user: "1000:1000"
     depends_on:
       db:
         condition: service_healthy
@@ -27,15 +28,17 @@ services:
       # Changed this line to exclude node_modules
       - ./frontend:/app:delegated
       - /app/node_modules/
+    user: "node:node"
     ports:
-      - "3000:3000"
+      - "0.0.0.0:3000:3000"
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://185.137.122.217:8000
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
     depends_on:
       - backend
 
   db:
-    image: postgres:13
+    image: postgres:16.5-alpine3.20
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
