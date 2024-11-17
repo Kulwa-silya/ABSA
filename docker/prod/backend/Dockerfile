@@ -16,19 +16,16 @@ RUN pip install gunicorn
 # Copy project
 COPY . .
 
-# Copy production settings
-COPY docker/prod/config/settings_prod.py config/
-
-# Collect static files
-RUN python manage.py collectstatic --noinput
-
 # Create and set proper permissions for media and static directories
 RUN mkdir -p /app/media /app/staticfiles \
     && chown -R 1000:1000 /app/media /app/staticfiles
 
 # Set environment variables
-ENV DJANGO_SETTINGS_MODULE=config.settings_prod
+ENV DJANGO_ENV=production
 ENV PYTHONUNBUFFERED=1
+
+# Collect static files
+RUN python manage.py collectstatic --noinput
 
 # Expose port
 EXPOSE 8000
