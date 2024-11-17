@@ -9,12 +9,17 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install gunicorn
 
 # Copy project
-COPY . .
+# COPY . .
+COPY backend/ .
+
+RUN pwd
+
+# COPY gunicorn.conf.py /app/docker/prod/backend/gunicorn.conf.py
 
 # Create and set proper permissions for media and static directories
 RUN mkdir -p /app/media /app/staticfiles /app/logs \
@@ -31,4 +36,4 @@ RUN python manage.py collectstatic --noinput
 EXPOSE 8000
 
 # Start Gunicorn
-CMD ["gunicorn", "--config", "docker/prod/backend/gunicorn.conf.py", "config.wsgi:application"]
+CMD ["gunicorn", "--config", "config/gunicorn.conf.py", "config.wsgi:application"]

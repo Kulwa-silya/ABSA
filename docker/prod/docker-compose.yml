@@ -16,7 +16,7 @@ services:
 
   backend:
     build:
-      context: ${PWD}/../../backend
+      context: ${PWD}/../..
       dockerfile: ${PWD}/../../docker/prod/backend/Dockerfile
     expose:
       - "8000"
