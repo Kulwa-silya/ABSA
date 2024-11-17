@@ -4,7 +4,7 @@ FROM node:18 as builder
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY frontend/package*.json ./
 
 # Install dependencies
 RUN npm install
@@ -12,7 +12,8 @@ RUN npm install
 RUN npx vite --version || echo "Vite not installed"
 
 # Copy source code
-COPY . .
+# COPY . .
+COPY frontend/ ./
 
 # Build the application
 RUN npm run build
