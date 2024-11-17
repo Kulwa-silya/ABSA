@@ -30,6 +30,28 @@ X_FRAME_OPTIONS = 'DENY'
 
 
 # Production logging
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#         },
+#         'file': {
+#             'class': 'logging.FileHandler',
+#             'filename': '/app/logs/django.log',
+#         },
+#     },
+#     'loggers': {
+#         'django': {
+#             'handlers': ['console', 'file'],
+#             'level': 'WARNING',
+#         },
+#     }
+# }
+# backend/config/settings_prod.py
+
+# Production logging
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -37,15 +59,11 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
         },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': '/app/logs/django.log',
-        },
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
-            'level': 'WARNING',
+            'handlers': ['console'],
+            'level': 'INFO',
         },
-    }
+    },
 }
