@@ -38,7 +38,7 @@ services:
 
   frontend:
     build:
-      context: ${PWD}/../../frontend
+      context: ${PWD}/../..
       dockerfile: ${PWD}/../../docker/prod/frontend/Dockerfile
     expose:
       - "3000"
