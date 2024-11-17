@@ -17,8 +17,8 @@ RUN pip install gunicorn
 COPY . .
 
 # Create and set proper permissions for media and static directories
-RUN mkdir -p /app/media /app/staticfiles \
-    && chown -R 1000:1000 /app/media /app/staticfiles
+RUN mkdir -p /app/media /app/staticfiles /app/logs \
+    && chown -R 1000:1000 /app/media /app/staticfiles /app/logs
 
 # Set environment variables
 ENV DJANGO_ENV=production
