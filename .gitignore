@@ -52,3 +52,9 @@ node_modules/
 media/
 *.log
 .DS_Store
+
+
+# Database backups
+backup/
+scripts/backup/
+*.sql
