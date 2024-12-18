@@ -1,12 +1,11 @@
-// frontend/src/components/Navbar.tsx
 import React from "react";
-import { BarChart3, FormInput, LogOut } from "lucide-react";
+import { BarChart3, FormInput, LogOut, ClipboardCheck } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "./Button";
 
 interface NavbarProps {
-  currentPage: "dashboard" | "form";
-  onPageChange: (page: "dashboard" | "form") => void;
+  currentPage: "dashboard" | "form" | "verification";
+  onPageChange: (page: "dashboard" | "form" | "verification") => void;
 }
 
 export function Navbar({ currentPage, onPageChange }: NavbarProps) {
@@ -44,6 +43,17 @@ export function Navbar({ currentPage, onPageChange }: NavbarProps) {
               >
                 <FormInput className="w-5 h-5 mr-2" />
                 Form
+              </button>
+              <button
+                onClick={() => onPageChange("verification")}
+                className={`inline-flex items-center px-4 py-2 border-b-2 text-sm font-medium ${
+                  currentPage === "verification"
+                    ? "border-indigo-500 text-indigo-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <ClipboardCheck className="w-5 h-5 mr-2" />
+                Verification
               </button>
             </div>
           </div>

@@ -76,4 +76,34 @@ export const api = {
       return handleApiError(error as AxiosError);
     }
   },
+
+  // new entries
+  async getUnreviewedPosts() {
+    try {
+      const response = await authClient.get<PostDTO[]>("api/posts/unreviewed/");
+      return response.data;
+    } catch (error) {
+      return handleApiError(error as AxiosError);
+    }
+  },
+
+  async getReviewedPosts() {
+    try {
+      const response = await authClient.get<PostDTO[]>("api/posts/reviewed/");
+      return response.data;
+    } catch (error) {
+      return handleApiError(error as AxiosError);
+    }
+  },
+
+  async reviewPost(postId: number) {
+    try {
+      const response = await authClient.post<PostDTO>(
+        `api/posts/${postId}/review/`,
+      );
+      return response.data;
+    } catch (error) {
+      return handleApiError(error as AxiosError);
+    }
+  },
 };

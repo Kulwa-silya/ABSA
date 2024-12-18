@@ -21,6 +21,10 @@ export interface PostDTO {
   created_at?: string;
   user?: number;
   username?: string;
+
+  status: "unreviewed" | "reviewed";
+  reviewed_by?: number;
+  reviewed_at?: string;
 }
 
 export interface ApiError {
