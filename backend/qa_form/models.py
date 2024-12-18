@@ -16,10 +16,31 @@ class Source(models.Model):
         return self.name
 
 class Post(models.Model):
+    STATUS_CHOICES = [
+        ('unreviewed', 'Unreviewed'),
+        ('reviewed', 'Reviewed')
+    ]
+
+    # Existing fields
     caption = models.TextField()
     source = models.ForeignKey(Source, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
+
+    # New fields for review process
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='unreviewed'
+    )
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_posts'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"Post {self.id} from {self.source} by {self.user.username}"

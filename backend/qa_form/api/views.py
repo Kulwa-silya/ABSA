@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from datetime import datetime, timedelta
 from django.db.models import Count
 from django.db.models.functions import TruncDate
+from django.utils import timezone
 import json
 import csv
 from ..models import Post, Comment, Aspect, Source
@@ -24,6 +25,29 @@ class PostViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # Associate the post with the authenticated user
         serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['POST'])
+    def review(self, request, pk=None):
+        post = self.get_object()
+        post.status = 'reviewed'
+        post.reviewed_by = request.user
+        post.reviewed_at = timezone.now()
+        post.save()
+
+        serializer = self.get_serializer(post)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['GET'])
+    def unreviewed(self, request):
+        queryset = self.get_queryset().filter(status='unreviewed')
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['GET'])
+    def reviewed(self, request):
+        queryset = self.get_queryset().filter(status='reviewed')
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def export_csv(self, request):

@@ -35,10 +35,13 @@ class PostSerializer(serializers.ModelSerializer):
     source = serializers.CharField()  # We'll handle source creation/lookup in create method
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     username = serializers.SerializerMethodField()  # Add this line
+    status = serializers.CharField(read_only=True)
+    reviewed_by = serializers.PrimaryKeyRelatedField(read_only=True)
+    reviewed_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Post
-        fields = ['id', 'caption', 'source', 'created_at', 'comments', 'user', 'username']
+        fields = ['id', 'caption', 'source', 'created_at', 'comments', 'user', 'username', 'status', 'reviewed_by', 'reviewed_at']
         read_only_fields = ['user', 'username']
 
     def get_username(self, obj):  # Add this method
