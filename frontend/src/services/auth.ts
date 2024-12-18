@@ -2,6 +2,7 @@
 import axios from "axios";
 import { AuthCredentials, AuthResponse, User } from "../types/auth";
 
+// const API_URL = "http://185.137.122.217";
 const API_URL = "http://185.137.122.217";
 
 export const authClient = axios.create({
@@ -9,7 +10,7 @@ export const authClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true
+  withCredentials: true,
 });
 
 // Add token to requests if it exists
