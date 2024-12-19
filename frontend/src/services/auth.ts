@@ -2,8 +2,8 @@
 import axios from "axios";
 import { AuthCredentials, AuthResponse, User } from "../types/auth";
 
-// const API_URL = "http://185.137.122.217";
-const API_URL = "http://localhost:8000/";
+const API_URL = "http://185.137.122.217";
+// const API_URL = "http://localhost:8000/";
 
 export const authClient = axios.create({
   baseURL: API_URL,
