@@ -2,76 +2,109 @@ import React, { useState, useEffect } from "react";
 import { PostDTO } from "../../types/api";
 import { api } from "../../services/api";
 import { PostReview } from "./PostReview";
-import { ClipboardCheck } from "lucide-react";
+import { VerificationProvider } from "../../contexts/VerificationContext";
+import { ClipboardCheck, Filter, Download } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
+
+interface FilterState {
+  source?: string;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+}
 
 export function VerificationHome() {
   const [unreviewedPosts, setUnreviewedPosts] = useState<PostDTO[]>([]);
   const [reviewedPosts, setReviewedPosts] = useState<PostDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [verifyingId, setVerifyingId] = useState<number | null>(null);
   const [selectedPost, setSelectedPost] = useState<PostDTO | null>(null);
+  const [filters, setFilters] = useState<FilterState>({});
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const [unreviewed, reviewed] = await Promise.all([
-          api.getUnreviewedPosts(),
-          api.getReviewedPosts(),
-        ]);
-        setUnreviewedPosts(unreviewed);
-        setReviewedPosts(reviewed);
-      } catch (error) {
-        console.error("Error fetching posts:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPosts();
   }, []);
+
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      const [unreviewed, reviewed] = await Promise.all([
+        api.getUnreviewedPosts(),
+        api.getReviewedPosts(),
+      ]);
+      setUnreviewedPosts(unreviewed);
+      setReviewedPosts(reviewed);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleVerifyClick = (post: PostDTO) => {
     setSelectedPost(post);
   };
 
-  const handleSaveReview = async (updatedPost: PostDTO) => {
+  const handleBackToList = async () => {
+    setSelectedPost(null);
+    await fetchPosts();
+  };
+
+  const handleExportCSV = async () => {
     try {
-      await api.reviewPost(updatedPost.id!);
-      setUnreviewedPosts((current) =>
-        current.filter((post) => post.id !== updatedPost.id),
-      );
-      setReviewedPosts((current) => [...current, updatedPost]);
-      setSelectedPost(null); // Go back to list
+      const blob = await api.exportCsv();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "verification_data.csv");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     } catch (error) {
-      console.error("Error saving review:", error);
+      console.error("Error exporting CSV:", error);
     }
   };
 
-  if (selectedPost) {
-    return (
-      <PostReview
-        post={selectedPost}
-        onSave={handleSaveReview}
-        onBack={() => setSelectedPost(null)}
-      />
-    );
-  }
+  const filterPosts = (posts: PostDTO[]) => {
+    return posts.filter((post) => {
+      if (
+        filters.source &&
+        !post.source.toLowerCase().includes(filters.source.toLowerCase())
+      ) {
+        return false;
+      }
+      if (filters.dateRange) {
+        const postDate = new Date(post.created_at!);
+        if (
+          postDate < filters.dateRange.start ||
+          postDate > filters.dateRange.end
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  };
 
-  // Pagination logic
+  const filteredUnreviewed = filterPosts(unreviewedPosts);
+  const filteredReviewed = filterPosts(reviewedPosts);
+  const allFilteredPosts = [...filteredUnreviewed, ...filteredReviewed];
+
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const allPosts = [...unreviewedPosts, ...reviewedPosts];
-  const paginatedPosts = allPosts.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(allPosts.length / ITEMS_PER_PAGE);
+  const paginatedPosts = allFilteredPosts.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(allFilteredPosts.length / ITEMS_PER_PAGE);
 
-  const truncateText = (text: string, maxLength: number = 100) => {
-    if (!text) return "";
-    if (text.length <= maxLength) return text;
-    return text.slice(0, maxLength) + "...";
-  };
+  if (selectedPost) {
+    return (
+      <VerificationProvider>
+        <PostReview initialPost={selectedPost} onBack={handleBackToList} />
+      </VerificationProvider>
+    );
+  }
 
   if (loading) {
     return (
@@ -83,20 +116,127 @@ export function VerificationHome() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="sm:flex sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">
-          Social Media Data Verification
-        </h1>
+      {/* Header Section */}
+      <div className="sm:flex sm:items-center sm:justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Social Media Data Verification
+          </h1>
+          <p className="mt-2 text-sm text-gray-700">
+            Verify aspects from comments too see if their correct
+          </p>
+        </div>
         <div className="mt-4 sm:mt-0 sm:flex sm:space-x-4">
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-            Pending {unreviewedPosts.length} posts
-          </span>
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-            Verified {reviewedPosts.length} posts
-          </span>
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <Filter className="w-5 h-5 mr-2" />
+            Filters
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            <Download className="w-5 h-5 mr-2" />
+            Export CSV
+          </button>
         </div>
       </div>
 
+      {/* Stats Section */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white rounded-lg shadow px-5 py-6">
+          <div className="text-sm font-medium text-gray-500">
+            Pending Reviews
+          </div>
+          <div className="mt-2 text-3xl font-semibold text-yellow-600">
+            {unreviewedPosts.length}
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow px-5 py-6">
+          <div className="text-sm font-medium text-gray-500">
+            Verified Posts
+          </div>
+          <div className="mt-2 text-3xl font-semibold text-green-600">
+            {reviewedPosts.length}
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow px-5 py-6">
+          <div className="text-sm font-medium text-gray-500">Total Posts</div>
+          <div className="mt-2 text-3xl font-semibold text-indigo-600">
+            {allFilteredPosts.length}
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow px-5 py-6">
+          <div className="text-sm font-medium text-gray-500">
+            Completion Rate
+          </div>
+          <div className="mt-2 text-3xl font-semibold text-indigo-600">
+            {Math.round(
+              (reviewedPosts.length / (allFilteredPosts.length || 1)) * 100,
+            )}
+            %
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Panel */}
+      {isFilterOpen && (
+        <div className="bg-white rounded-lg shadow-sm mb-8 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Source
+              </label>
+              <input
+                type="text"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                placeholder="Filter by source"
+                value={filters.source || ""}
+                onChange={(e) =>
+                  setFilters((prev) => ({ ...prev, source: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Date Range
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="date"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      dateRange: {
+                        start: new Date(e.target.value),
+                        end: prev.dateRange?.end || new Date(),
+                      },
+                    }))
+                  }
+                />
+                <input
+                  type="date"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      dateRange: {
+                        start: prev.dateRange?.start || new Date(),
+                        end: new Date(e.target.value),
+                      },
+                    }))
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Posts Table */}
       <div className="mt-8 flex flex-col">
         <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
@@ -160,13 +300,8 @@ export function VerificationHome() {
                         {post.source}
                       </td>
                       <td className="px-3 py-4 text-sm text-gray-900">
-                        <div className="max-w-lg">
-                          <div className="line-clamp-1">{post.caption}</div>
-                          {post.caption.length > 100 && (
-                            <button className="text-indigo-600 text-sm hover:text-indigo-900">
-                              Show more
-                            </button>
-                          )}
+                        <div className="max-w-lg line-clamp-2">
+                          {post.caption}
                         </div>
                       </td>
                       <td className="px-3 py-4 text-sm text-gray-500">
@@ -184,7 +319,12 @@ export function VerificationHome() {
                             Verify
                           </button>
                         ) : (
-                          <span className="text-gray-400">Verified</span>
+                          <button
+                            onClick={() => handleVerifyClick(post)}
+                            className="text-gray-600 hover:text-gray-900 font-medium"
+                          >
+                            View
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -219,16 +359,14 @@ export function VerificationHome() {
             <p className="text-sm text-gray-700">
               Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
               <span className="font-medium">
-                {Math.min(endIndex, allPosts.length)}
+                {Math.min(endIndex, allFilteredPosts.length)}
               </span>{" "}
-              of <span className="font-medium">{allPosts.length}</span> results
+              of <span className="font-medium">{allFilteredPosts.length}</span>{" "}
+              results
             </p>
           </div>
           <div>
-            <nav
-              className="isolate inline-flex -space-x-px rounded-md shadow-sm"
-              aria-label="Pagination"
-            >
+            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm">
               {Array.from({ length: totalPages }, (_, i) => (
                 <button
                   key={i + 1}

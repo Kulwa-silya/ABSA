@@ -8,44 +8,88 @@ from datetime import datetime, timedelta
 from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.utils import timezone
+from django.db import transaction
 import json
 import csv
 from ..models import Post, Comment, Aspect, Source
 from .serializers import PostSerializer, CommentSerializer, AspectSerializer, SourceSerializer
 
 class PostViewSet(viewsets.ModelViewSet):
-    queryset = Post.objects.all()  # Default queryset for router/schema
+    queryset = Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # Filter posts by the authenticated user
         return Post.objects.filter(user=self.request.user)
 
-    def perform_create(self, serializer):
-        # Associate the post with the authenticated user
-        serializer.save(user=self.request.user)
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        # Handle post verification status
+        if instance.status == 'reviewed' and not request.user.is_staff:
+            return Response(
+                {"detail": "Cannot modify a reviewed post"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = self.get_serializer(
+            instance,
+            data=request.data,
+            partial=partial
+        )
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response(serializer.data)
 
     @action(detail=True, methods=['POST'])
+    @transaction.atomic
     def review(self, request, pk=None):
         post = self.get_object()
+
+        if post.status == 'reviewed':
+            return Response(
+                {"detail": "Post is already reviewed"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update post data if provided
+        if request.data:
+            serializer = self.get_serializer(
+                post,
+                data=request.data,
+                partial=True
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+        # Mark as reviewed
         post.status = 'reviewed'
         post.reviewed_by = request.user
         post.reviewed_at = timezone.now()
         post.save()
 
-        serializer = self.get_serializer(post)
-        return Response(serializer.data)
+        return Response(self.get_serializer(post).data)
 
     @action(detail=False, methods=['GET'])
     def unreviewed(self, request):
         queryset = self.get_queryset().filter(status='unreviewed')
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['GET'])
     def reviewed(self, request):
         queryset = self.get_queryset().filter(status='reviewed')
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -137,7 +181,7 @@ class PostViewSet(viewsets.ModelViewSet):
         return Response({
             'totalPosts': user_posts.count(),
             'totalComments': Comment.objects.filter(post__user=request.user).count(),
-            'sourcesCount': user_sources.count(),  # This should now give the correct count
+            'sourcesCount': user_sources.count(),
             'lastSevenDays': [
                 {
                     'date': date.strftime('%Y-%m-%d'),
@@ -148,8 +192,9 @@ class PostViewSet(viewsets.ModelViewSet):
             'topSources': list(top_sources)
         })
 
+
 class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()  # Default queryset for router/schema
+    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated]
 
@@ -160,8 +205,9 @@ class CommentViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(post_id=post_id)
         return queryset
 
+
 class AspectViewSet(viewsets.ModelViewSet):
-    queryset = Aspect.objects.all()  # Default queryset for router/schema
+    queryset = Aspect.objects.all()
     serializer_class = AspectSerializer
     permission_classes = [IsAuthenticated]
 
@@ -171,6 +217,7 @@ class AspectViewSet(viewsets.ModelViewSet):
         if comment_id is not None:
             queryset = queryset.filter(comment_id=comment_id)
         return queryset
+
 
 class SourceViewSet(viewsets.ModelViewSet):
     queryset = Source.objects.all()

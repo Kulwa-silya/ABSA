@@ -1,33 +1,99 @@
-import React, { useState } from "react";
+// frontend/src/components/DataVerification/PostReview.tsx
+import React, { useEffect } from "react";
+import { ArrowLeft, Save, Undo, Redo, Plus, Trash } from "lucide-react";
 import { PostDTO } from "../../types/api";
-import { ArrowLeft, Save, Undo, Redo } from "lucide-react";
+import { useVerification } from "../../contexts/VerificationContext";
+import { generateUUID } from "../../utils/uuid";
 
 interface PostReviewProps {
-  post: PostDTO;
-  onSave: (updatedPost: PostDTO) => Promise<void>;
+  initialPost: PostDTO;
   onBack: () => void;
 }
 
-export function PostReview({
-  post: initialPost,
-  onSave,
-  onBack,
-}: PostReviewProps) {
-  const [post, setPost] = useState<PostDTO>(initialPost);
-  const [isSaving, setIsSaving] = useState(false);
+export function PostReview({ initialPost, onBack }: PostReviewProps) {
+  const {
+    state: { post, isSaving, error, currentIndex, history },
+    setPost,
+    updatePost,
+    undo,
+    redo,
+    saveChanges,
+  } = useVerification();
+
+  useEffect(() => {
+    setPost(initialPost);
+  }, [initialPost]);
 
   const handleSave = async () => {
+    if (!post) return;
     try {
-      setIsSaving(true);
-      await onSave(post);
-    } finally {
-      setIsSaving(false);
+      await saveChanges(post);
+      onBack(); // Return to list after successful save
+    } catch (error) {
+      // Error is handled by the context
+      console.error("Failed to save:", error);
     }
   };
 
+  const handleAddAspect = (commentIndex: number) => {
+    if (!post) return;
+
+    const updatedPost = { ...post };
+    const newAspect = {
+      aspect_name: "",
+      aspect_text: "",
+      sentiment: "neutral" as const,
+    };
+
+    updatedPost.comments[commentIndex].aspects.push(newAspect);
+    updatePost(updatedPost);
+  };
+
+  const handleRemoveAspect = (commentIndex: number, aspectIndex: number) => {
+    if (!post) return;
+
+    const updatedPost = { ...post };
+    updatedPost.comments[commentIndex].aspects.splice(aspectIndex, 1);
+    updatePost(updatedPost);
+  };
+
+  const handleCommentTextChange = (commentIndex: number, text: string) => {
+    if (!post) return;
+
+    const updatedPost = { ...post };
+    updatedPost.comments[commentIndex].text = text;
+    updatePost(updatedPost);
+  };
+
+  const handleAspectChange = (
+    commentIndex: number,
+    aspectIndex: number,
+    field: "aspect_name" | "sentiment",
+    value: string,
+  ) => {
+    if (!post) return;
+
+    const updatedPost = { ...post };
+    updatedPost.comments[commentIndex].aspects[aspectIndex][field] = value;
+    updatePost(updatedPost);
+  };
+
+  const handleGeneralSentimentChange = (
+    commentIndex: number,
+    sentiment: "positive" | "neutral" | "negative",
+  ) => {
+    if (!post) return;
+
+    const updatedPost = { ...post };
+    updatedPost.comments[commentIndex].general_sentiment = sentiment;
+    updatePost(updatedPost);
+  };
+
+  if (!post) return null;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header Bar */}
+      {/* Header with navigation and actions */}
       <div className="flex items-center justify-between mb-8 bg-white p-4 rounded-lg shadow">
         <button
           onClick={onBack}
@@ -37,22 +103,36 @@ export function PostReview({
           Back to List
         </button>
         <div className="flex items-center gap-4">
-          <button className="p-2 text-gray-600 hover:text-gray-900 bg-gray-50 rounded-md">
+          <button
+            onClick={undo}
+            disabled={currentIndex === 0}
+            className="p-2 text-gray-600 hover:text-gray-900 bg-gray-50 rounded-md disabled:opacity-50"
+          >
             <Undo className="w-5 h-5" />
           </button>
-          <button className="p-2 text-gray-600 hover:text-gray-900 bg-gray-50 rounded-md">
+          <button
+            onClick={redo}
+            disabled={currentIndex === history.length - 1}
+            className="p-2 text-gray-600 hover:text-gray-900 bg-gray-50 rounded-md disabled:opacity-50"
+          >
             <Redo className="w-5 h-5" />
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="inline-flex items-center px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="inline-flex items-center px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
           >
             <Save className="w-5 h-5 mr-2" />
             {isSaving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+          {error}
+        </div>
+      )}
 
       {/* Post Details */}
       <div className="bg-white shadow rounded-lg mb-6">
@@ -77,12 +157,12 @@ export function PostReview({
         </div>
       </div>
 
-      {/* Comments Section */}
-      {post.comments?.map((comment, index) => (
+      {/* Comments */}
+      {post.comments.map((comment, commentIndex) => (
         <div key={comment.id} className="bg-white shadow rounded-lg mb-6">
           <div className="border-b px-6 py-4">
             <h3 className="text-lg font-semibold text-gray-900">
-              Comment {index + 1}
+              Comment {commentIndex + 1}
             </h3>
           </div>
 
@@ -94,15 +174,10 @@ export function PostReview({
               </label>
               <textarea
                 value={comment.text}
-                onChange={(e) => {
-                  const updatedComments = [...post.comments];
-                  updatedComments[index] = {
-                    ...comment,
-                    text: e.target.value,
-                  };
-                  setPost({ ...post, comments: updatedComments });
-                }}
-                className="w-full min-h-[100px] p-3 border-2 border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                onChange={(e) =>
+                  handleCommentTextChange(commentIndex, e.target.value)
+                }
+                className="w-full min-h-[100px] p-3 border-2 border-gray-300 rounded-md"
                 rows={3}
               />
             </div>
@@ -113,51 +188,60 @@ export function PostReview({
                 <label className="block text-sm font-medium text-gray-700">
                   Aspects
                 </label>
-                <button className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
-                  + Add Aspect
+                <button
+                  onClick={() => handleAddAspect(commentIndex)}
+                  className="inline-flex items-center text-indigo-600 hover:text-indigo-800"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Aspect
                 </button>
               </div>
 
               {comment.aspects.map((aspect, aspectIndex) => (
                 <div
                   key={aspect.id}
-                  className="flex items-center gap-4 mb-4 bg-white p-4 rounded-md shadow-sm"
+                  className="flex items-center gap-4 mb-4 bg-white p-4 rounded-md"
                 >
                   <div className="flex-1">
                     <input
                       type="text"
                       value={aspect.aspect_name}
-                      onChange={(e) => {
-                        const updatedComments = [...post.comments];
-                        updatedComments[index].aspects[aspectIndex] = {
-                          ...aspect,
-                          aspect_name: e.target.value,
-                        };
-                        setPost({ ...post, comments: updatedComments });
-                      }}
-                      className="w-full p-2 border-2 border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      onChange={(e) =>
+                        handleAspectChange(
+                          commentIndex,
+                          aspectIndex,
+                          "aspect_name",
+                          e.target.value,
+                        )
+                      }
+                      className="w-full p-2 border-2 border-gray-300 rounded-md"
                       placeholder="Enter aspect"
                     />
                   </div>
                   <select
                     value={aspect.sentiment}
-                    onChange={(e) => {
-                      const updatedComments = [...post.comments];
-                      updatedComments[index].aspects[aspectIndex] = {
-                        ...aspect,
-                        sentiment: e.target.value as
-                          | "positive"
-                          | "neutral"
-                          | "negative",
-                      };
-                      setPost({ ...post, comments: updatedComments });
-                    }}
-                    className="w-40 p-2 border-2 border-gray-300 rounded-md bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    onChange={(e) =>
+                      handleAspectChange(
+                        commentIndex,
+                        aspectIndex,
+                        "sentiment",
+                        e.target.value,
+                      )
+                    }
+                    className="w-40 p-2 border-2 border-gray-300 rounded-md bg-white"
                   >
                     <option value="positive">Positive</option>
                     <option value="neutral">Neutral</option>
                     <option value="negative">Negative</option>
                   </select>
+                  <button
+                    onClick={() =>
+                      handleRemoveAspect(commentIndex, aspectIndex)
+                    }
+                    className="p-2 text-red-600 hover:text-red-800 rounded-md"
+                  >
+                    <Trash className="w-5 h-5" />
+                  </button>
                 </div>
               ))}
             </div>
@@ -175,18 +259,13 @@ export function PostReview({
                       name={`sentiment-${comment.id}`}
                       value={sentiment}
                       checked={comment.general_sentiment === sentiment}
-                      onChange={(e) => {
-                        const updatedComments = [...post.comments];
-                        updatedComments[index] = {
-                          ...comment,
-                          general_sentiment: e.target.value as
-                            | "positive"
-                            | "neutral"
-                            | "negative",
-                        };
-                        setPost({ ...post, comments: updatedComments });
-                      }}
-                      className="h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                      onChange={() =>
+                        handleGeneralSentimentChange(
+                          commentIndex,
+                          sentiment as "positive" | "neutral" | "negative",
+                        )
+                      }
+                      className="h-4 w-4 text-indigo-600 border-gray-300"
                     />
                     <span className="ml-2 text-sm font-medium text-gray-700 capitalize">
                       {sentiment}

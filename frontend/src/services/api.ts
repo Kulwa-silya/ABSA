@@ -31,9 +31,37 @@ export const api = {
     }
   },
 
-  async updatePost(id: number, post: Omit<PostDTO, "id" | "created_at">) {
+  async updatePost(id: number, post: PostDTO) {
     try {
-      const response = await authClient.put<PostDTO>(`api/posts/${id}/`, post);
+      // Remove fields that shouldn't be sent
+      const {
+        id: _,
+        created_at,
+        reviewed_at,
+        reviewed_by,
+        username,
+        ...updateData
+      } = post;
+
+      // Clean up comments and aspects
+      const cleanedData = {
+        ...updateData,
+        comments: updateData.comments.map((comment) => ({
+          ...comment,
+          aspects: comment.aspects.map((aspect) => ({
+            // Only include existing numeric IDs
+            ...(typeof aspect.id === "number" ? { id: aspect.id } : {}),
+            aspect_name: aspect.aspect_name,
+            aspect_text: aspect.aspect_text || "",
+            sentiment: aspect.sentiment,
+          })),
+        })),
+      };
+
+      const response = await authClient.put<PostDTO>(
+        `api/posts/${id}/`,
+        cleanedData,
+      );
       return response.data;
     } catch (error) {
       return handleApiError(error as AxiosError);
